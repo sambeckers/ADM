@@ -31,9 +31,14 @@ def reservoir_sampling(k, datastream):
         # Note that it is NOT allowed to store the whole datastream in memory
         # Note that the sample array size should not exceed k
 
-        # BEGIN IMPLEMENTATION
-
-        # END IMPLEMENTATION
+        # Store the first k transactions 
+        if index < k: 
+            sample.append(transaction)
+        else:
+            # Randomly replace elements based on the index
+            j = random.randint(0, index)
+            if j < k:
+                sample[j] = transaction
 
     return sample
 

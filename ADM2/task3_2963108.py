@@ -22,11 +22,14 @@ class FlajoletMartin:
         #       Count the number of trailing zeros
 
         trailing_zeros_count = 0
+        x_binary = bin(x)[2:] # Slice removes the '0b' prefix
 
-        # BEGIN IMPLEMENTATION
-
-        # END IMPLEMENTATION
-
+        for bit in reversed(x_binary):
+            if bit == '0':
+                trailing_zeros_count += 1
+            else: # If we encounter a nonzero value, stop counting
+                break
+       
         return trailing_zeros_count
 
     def add(self, item):
@@ -37,9 +40,14 @@ class FlajoletMartin:
             #       Count the number of trailing zeros in a hash value
             #       Update the maximum trailing zero value of the current hash function
 
-            # BEGIN IMPLEMENTATION
+            # Calculate the hash value
+            hash_val = self.hash_function(item, i) 
 
-            # END IMPLEMENTATION
+            # Count the number of trailing zeros in a hash value
+            r_a = self.count_trailing_zeros(hash_val) 
+
+            # Update the maximum trailing zero value of the current hash function
+            self.max_trailing_zeros[i] = max(r_a, self.max_trailing_zeros[i]) 
 
 
     def estimate_number(self):
@@ -53,9 +61,10 @@ class FlajoletMartin:
 
 # Inspection Results
 if __name__ == "__main__":
-    fm = FlajoletMartin(num_hashes=20)
+    fm = FlajoletMartin(num_hashes=100) # More accurate with more hash functions
     unique_elements = [f"element-{i}" for i in range(100000)]  # Simulating 100,000 unique elements
 
+    fm.count_trailing_zeros(7)
     for element in unique_elements:
         fm.add(element)
 

@@ -2,6 +2,7 @@
 from hashlib import sha256
 import numpy as np
 import functools
+import matplotlib.pyplot as plt
 
 def create_hash_functions(num_hash_functions, size_bit_array):
     """Create a list of runnable hash functions.
@@ -20,9 +21,8 @@ def create_hash_functions(num_hash_functions, size_bit_array):
         # Create a lambda function that hashes the input
         # note that this should be a unique hash function for all
 
-        # BEGIN IMPLEMENTATION
-
-        # END IMPLEMENTATION
+        # Create unique hash function using seed i, based on hash_function() in task3, but in one line using lambda
+        hash_functions.append(lambda x, i=i: int(sha256((str(i) + x).encode()).hexdigest(), 16) % size_bit_array)
 
     return hash_functions
 
@@ -39,9 +39,9 @@ def add_to_bloom_filter(bloom_filter, hash_functions, bank_account):
         list[int]: The updated bloom filter.
     """
 
-    # BEGIN IMPLEMENTATION
-
-    # END IMPLEMENTATION
+    for f in hash_functions: # For each hash function
+        loc = f(bank_account) # Hash function for the given bank account
+        bloom_filter[loc] = 1 # Set the bits in the bloom filter to 1
 
     return bloom_filter
 
@@ -57,10 +57,10 @@ def check_bloom_filter(bloom_filter, hash_functions, bank_account):
         bool: True if the bank account is in the bloom filter, False otherwise.
     """
 
-    # BEGIN IMPLEMENTATION
-
-    # END IMPLEMENTATION
-
+    for f in hash_functions: 
+        loc = f(bank_account) 
+        if bloom_filter[loc] == 0: # If any of the bits is 0, the bank account is not in the bloom filter
+            return False
     return True
 
 if __name__ == "__main__":
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # Set up the Bloom filter as an array 8 times as big as the number of bank accounts
     bloom_filter = [0] * 8*nr_bank_accounts
     # Experiment with 2 hash functions (try raising it to 30)
-    hash_functions = create_hash_functions(2, 8*nr_bank_accounts)
+    hash_functions = create_hash_functions(5, 8*nr_bank_accounts)
     # Enter all valid account numbers
     for account in real_bank_accounts:
         add_to_bloom_filter(bloom_filter, hash_functions, account)
@@ -92,3 +92,29 @@ if __name__ == "__main__":
     print("Is real12345 a valid account number?", check_bloom_filter(bloom_filter, hash_functions, "real12345"))
     print("Is real123456 a valid account number?", check_bloom_filter(bloom_filter, hash_functions, "real123456"))
     print("Is 12345 a valid account number?", check_bloom_filter(bloom_filter, hash_functions, "12345"))
+
+    fpr_arr = []
+    num_hash_functions_arr = np.linspace(2, 30, dtype=int)
+    for num in num_hash_functions_arr:
+        hash_functions = create_hash_functions(num, 8*nr_bank_accounts)
+        # Enter all valid account numbers
+        for account in real_bank_accounts:
+            add_to_bloom_filter(bloom_filter, hash_functions, account)
+
+        # Calulate the false positive rate
+        fake_bank_accounts = ["fake" + str(i) for i in range(nr_bank_accounts)]
+        false_positives = 0
+        for fake_account in fake_bank_accounts:
+            if check_bloom_filter(bloom_filter, hash_functions, fake_account):
+                false_positives += 1 
+        fpr = false_positives/nr_bank_accounts
+        fpr_arr.append(fpr)
+    
+    plt.figure(dpi=300)
+    plt.plot(num_hash_functions_arr, fpr_arr)
+    plt.xlabel("Number of hash functions")
+    plt.ylabel("False positive rate")
+    plt.title("False positive rate vs number of hash functions")
+    plt.show()
+
+    print('The code produces, given the number of hash functions, an optimal false positive rate, as seen in the graph above.')
