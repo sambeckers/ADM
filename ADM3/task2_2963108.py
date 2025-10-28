@@ -45,9 +45,9 @@ def standardize_data(data):
     Returns:
     array: Scaled dataset.
     """
-    # TO DO: Instantiate StandardScaler and use fit_transform to scale the data
-
-
+    # DONE: Instantiate StandardScaler and use fit_transform to scale the data
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(data)
 
     return data_scaled
 
@@ -64,9 +64,9 @@ def apply_pca(data_scaled, n_components):
     array: PCA transformed data.
     PCA object: The PCA object used.
     """
-    # TO DO: Instantiate PCA with n_components and apply PCA transformation
-
-
+    # DONE: Instantiate PCA with n_components and apply PCA transformation
+    pca = PCA(n_components=n_components)
+    data_pca = pca.fit_transform(data_scaled)
 
     return data_pca, pca
 
@@ -80,6 +80,15 @@ def plot_original_data(data, labels):
     labels (array): Cluster labels for each data point, where each label indicates which cluster the point belongs to.
     """
     # TO DO: Use scatter plot to visualize the original data in 3D space
+    fig = plt.figure(dpi=300)
+    ax = plt.axes(projection='3d') # 3D projection
+    ax.scatter(data[:, 0], data[:, 1], data[:, 2], c=labels, s=20) # Set integer labels (y) as colors
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    plt.tight_layout()
+    plt.title("Original 3D data")
+    plt.show()
 
 # Function to plot the XY projection
 def plot_xy_projection(data, labels):
@@ -90,7 +99,16 @@ def plot_xy_projection(data, labels):
     data (array): 3D dataset.
     labels (array): Cluster labels for each data point.
     """
-    # TO DO: Implement the function to plot the XY projection of the dataset
+    # DONE: Implement the function to plot the XY projection of the dataset
+    # X, Y = index 0 and 1
+    plt.figure(dpi=300)
+    plt.scatter(data[:, 0], data[:, 1], c=labels, s=20)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("XY projection")
+    plt.colorbar(label='Class Label')
+    plt.tight_layout()
+    plt.show()
 
 # Function to plot the XZ projection
 def plot_xz_projection(data, labels):
@@ -101,7 +119,17 @@ def plot_xz_projection(data, labels):
     data (array): 3D dataset.
     labels (array): Cluster labels for each data point.
     """
-    # TO DO: Implement the function to plot the XY projection of the dataset
+    # DONE: Implement the function to plot the XZ projection of the dataset
+    # X, Z = index 0 and 2
+    plt.figure(dpi=300)
+    plt.scatter(data[:, 0], data[:, 2], c=labels, s=20)
+    plt.xlabel("x")
+    plt.ylabel("z")
+    plt.title("XZ projection")
+    plt.colorbar(label='Class Label')
+    plt.tight_layout()
+    plt.show()
+
 
 # Function to plot the YZ projection
 def plot_yz_projection(data, labels):
@@ -112,7 +140,16 @@ def plot_yz_projection(data, labels):
     data (array): 3D dataset.
     labels (array): Cluster labels for each data point.
     """
-    # TO DO: Implement the function to plot the XY projection of the dataset
+    # DONE: Implement the function to plot the YZ projection of the dataset
+    # Y, Z = index 1 and 2
+    plt.figure(dpi=300)
+    plt.scatter(data[:, 1], data[:, 2], c=labels, s=20)
+    plt.xlabel("y")
+    plt.ylabel("z")
+    plt.title("YZ projection")
+    plt.colorbar(label='Class Label')
+    plt.tight_layout()
+    plt.show()
 
 # Function to plot the PCA results
 def plot_pca_results(data_pca, labels):
@@ -123,12 +160,20 @@ def plot_pca_results(data_pca, labels):
     data_pca (array): PCA-transformed dataset (2D projection).
     labels (array): Cluster labels for each data point.
     """
-    # TO DO: Use scatter plot to visualize the 2D projection from PCA
+    # DONE: Use scatter plot to visualize the 2D projection from PCA
+    plt.figure(dpi=300)
+    plt.scatter(data_pca[:, 0], data_pca[:, 1], c=labels, s=20)
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.title("PCA 2D projection")
+    plt.colorbar(label='Class Label')
+    plt.show()
 
 
 if __name__ == "__main__":
     np.random.seed(2024)
     data, labels = generate_data() # Generate the data and labels
+    print(data.shape)
     
     # Plot original 3D data and projections
     plot_original_data(data, labels)
@@ -139,7 +184,7 @@ if __name__ == "__main__":
     # Standardize the dataset
     data_scaled = standardize_data(data)
 
-    # TO DO: Fill in appropriate value for n_components
-    data_pca, pca = apply_pca(data_scaled, n_components=_____)  # Apply PCA to the dataset
+    # DONE: Fill in appropriate value for n_components
+    data_pca, pca = apply_pca(data_scaled, n_components=2)  # Apply PCA to the dataset
     
     plot_pca_results(data_pca, labels)   # Plot PCA results

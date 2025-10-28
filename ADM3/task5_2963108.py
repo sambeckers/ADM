@@ -13,8 +13,9 @@ def load_data():
     Returns:
     tuple: The data (X) and color labels (color)
     """
-    # TO DO: Load dataset from files
-
+    # DONE: Load dataset from files
+    X = np.load('swiss_roll_larger.npy')
+    color = np.load('color_larger.npy')
 
 
     return X, color
@@ -32,9 +33,11 @@ def apply_tsne(X, n_components, perplexity, max_iter, init, random_state=2024):
     Returns:
     array: The t-SNE transformed dataset with 2 components.
     """
-    # TO DO: Create a pipeline to apply StandardScaler and t-SNE
-
-
+    # DONE: Create a pipeline to apply StandardScaler and t-SNE
+    tsne = make_pipeline(StandardScaler(), 
+                         TSNE(n_components=n_components, perplexity=perplexity, 
+                              max_iter=max_iter, init=init, random_state=random_state))
+    X_tsne_2d = tsne.fit_transform(X)
 
     return X_tsne_2d
 
@@ -47,15 +50,24 @@ def plot_tsne_projection(X_tsne_2d, color):
     X_tsne_2d (array): The t-SNE transformed dataset.
     color (array): The color labels for the points.
     """
-    # TO DO: Use scatter plot to visualize the 2D projection from t-SNE
-
+    # DONE: Use scatter plot to visualize the 2D projection from t-SNE
+    plt.figure(dpi=300)
+    plt.scatter(X_tsne_2d[:, 0], X_tsne_2d[:, 1], c=color, s=20)
+    plt.xlabel("t-SNE Component 1")
+    plt.ylabel("t-SNE Component 2")
+    plt.title("t-SNE 2D projection")
+    plt.colorbar(label='Class Label')
+    plt.tight_layout()
+    plt.show()
 
 
 
 if __name__ == "__main__":
     X, color = load_data()
 
-    # TO DO: Fill in the appropriate values for n_components, perplexity, max_iter, and init
-    X_tsne_2d = apply_tsne(X, n_components=_____, perplexity=_____, max_iter=_____, init=_____, random_state=2024)
+    # DONE: Fill in the appropriate values for n_components, perplexity, max_iter, and init
+    X_tsne_2d = apply_tsne(X, n_components=2, perplexity=15, max_iter=500, init='random', random_state=2024)
 
     plot_tsne_projection(X_tsne_2d, color)
+
+    print("The letter 'O' is visible in the plot\nand larger than the letter produced in task 4.")

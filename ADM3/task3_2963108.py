@@ -36,9 +36,11 @@ def apply_pca(X, n_components, random_state=2024):
     Returns:
     array: Transformed data with PCA applied.
     """
-    # TO DO: Create a pipeline to apply StandardScaler and PCA
-
-
+    # DONE: Create a pipeline to apply StandardScaler and PCA
+    # Fit and transform the data using the pipeline, will apply on both scaling and PCA
+    X_pca = make_pipeline(StandardScaler(),
+                          PCA(n_components=n_components, 
+                          random_state=random_state)).fit_transform(X)
 
     return X_pca
 
@@ -51,11 +53,16 @@ def plot_3d_data(X, color):
     X (array): The 3D dataset.
     color (array): The color labels for the points.
     """
-    # TO DO: Use scatter plot to visualize the original data in 3D space
-
-
-
-
+    # DONE: Use scatter plot to visualize the original data in 3D space
+    plt.figure(dpi=300)
+    ax = plt.axes(projection='3d') # 3D projection
+    ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=color, s=20)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    plt.title("3D Swiss Roll dataset")
+    plt.tight_layout()
+    plt.show()
 
 # Function to plot the XZ projection
 def plot_xz_projection(X, color):
@@ -66,11 +73,15 @@ def plot_xz_projection(X, color):
     X (array): The 3D dataset.
     color (array): The color labels for the points.
     """
-    # TO DO: Use scatter plot to visualize the XZ projection
-
-
-
-
+    # DONE: Use scatter plot to visualize the XZ projection
+    plt.figure(dpi=300)
+    plt.scatter(X[:, 0], X[:, 2], c=color, s=20)
+    plt.xlabel("x")
+    plt.ylabel("z")
+    plt.title("XZ projection")
+    plt.colorbar(label='Class Label')
+    plt.tight_layout()
+    plt.show()
 
 # Function to plot the 2D PCA projection
 def plot_pca_projection(X_pca, color):
@@ -81,19 +92,25 @@ def plot_pca_projection(X_pca, color):
     X_pca (array): The PCA-transformed dataset.
     color (array): The color labels for the points.
     """
-    # TO DO: Use scatter plot to visualize the 2D projection from PCA
-
-
-
+    # DONE: Use scatter plot to visualize the 2D projection from PCA
+    plt.figure(dpi=300)
+    plt.scatter(X_pca[:, 0], X_pca[:, 1], c=color, s=20)
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.title("PCA 2D projection")
+    plt.colorbar(label='Class Label')
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
     np.random.seed(2024)
     X, color = generate_swiss_roll(n_samples=1500, noise=0.1, random_state=2024)
 
-    #TO DO: Fill in appropriate value for n_components
-    X_pca = apply_pca(X, n_components=_____, random_state=2024) # Apply PCA
+    # DONE: Fill in appropriate value for n_components
+    X_pca = apply_pca(X, n_components=2, random_state=2024) # Apply PCA
 
     plot_3d_data(X, color)              # Visualize the original 3D dataset
     plot_xz_projection(X, color)        # Visualize the XZ projection
     plot_pca_projection(X_pca, color)   # Visualize the PCA 2D projection
+    print('PCA could not unfold the non-linear Swiss Roll dataset properly,\nas seen in the PCA 2D projection.')
