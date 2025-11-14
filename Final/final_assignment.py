@@ -3,10 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 """
-TODO: Read data
+DONE: Read data
 TODO: Make it possible to accept random_seed from the command line
 TODO: Convert data to user-item matrix (movies/ratings per user)
 TODO: Write function for Jaccard similarity
+TODO: Write function for shingling (make a matrix with a column for each user and each row showing whether they watched the movie or not)
+DONE: Write function for minhashing
+TODO: Optimise function for minhashing
 TODO: Write LSH algorithm function
 TODO: Write a README file with instructions on how to run the file for the grader
 """
