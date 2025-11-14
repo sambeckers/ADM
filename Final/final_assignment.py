@@ -1,6 +1,7 @@
 "Importing modules"
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import sparse
 
 """
 DONE: Read data
@@ -14,11 +15,55 @@ TODO: Write LSH algorithm function
 TODO: Write a README file with instructions on how to run the file for the grader
 """
 
+def load_data_to_sparse_matrix():
+    "Loading the data and assigning to variables"
+    data = np.load('user_movie_rating.npy')
+    user_id, movie_id = data[:,0], data[:,1] # Do not load ratings as they are irrelevant
+    
+    """Binary user-item matrix: map IDs to dense indices to avoid empty rows/columns"""
+    # Map raw IDs to contiguous 0..n-1 indices to prevent empty columns/rows
+    unique_users, user_index = np.unique(user_id, return_inverse=True)
+    unique_movies, movie_index = np.unique(movie_id, return_inverse=True)
 
-"Loading the data and assigning to variables"
-data = np.load('user_movie_rating.npy')
-user_id, movie_id, rating = data[:,0], data[:,1], data[:,2]
+    n_users = unique_users.size
+    n_movies = unique_movies.size
 
+    # Build CSC matrix with shape (n_movies, n_users)
+    S_i = sparse.csc_matrix(
+        (np.ones(len(user_index), dtype=bool), (movie_index, user_index)),
+        shape=(n_movies, n_users),
+        dtype=bool
+    )
+
+    return S_i, unique_users, unique_movies
+    
+S_i, user_id, movie_id = load_data_to_sparse_matrix()
+
+def minhash_sig(S_i, n_permutations, seed):
+    "Signature matrix with shape (n_permutations, n_users)"
+    # Use a sentinel equal to number of rows for columns with no 1s in a permutation
+    n_rows, n_cols = S_i.shape
+    sign_matrix = np.full((n_permutations, n_cols), fill_value=n_rows, dtype=int)
+
+    for i in range(n_permutations): # for every permutation
+        np.random.seed(int(i * seed)) #this function allows the use of a random seed and avoids repeats in permutation of indices
+        perm = np.random.permutation(S_i.shape[0]) # permute the row indices
+        # Permute the rows and ensure CSC format for efficient column access
+        perm_sparse = S_i[perm, :]
+
+        for j in range(n_cols): # for every user (column)
+            start = perm_sparse.indptr[j]
+            end = perm_sparse.indptr[j + 1]
+            if start == end:
+                # Column has no 1s in this permutation; keep sentinel
+                continue
+            col_rows = perm_sparse.indices[start:end]
+            # First row (minimum index) where column j is 1 after permutation
+            sign_matrix[i, j] = col_rows.min()
+
+    return sign_matrix
+
+minhash_sig(S_i,5, 42)
 """
 Minhashing
 """
