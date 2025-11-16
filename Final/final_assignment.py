@@ -20,17 +20,17 @@ def load_data_to_sparse_matrix():
     data = np.load('user_movie_rating.npy')
     user_id, movie_id = data[:,0], data[:,1] # Do not load ratings as they are irrelevant
     
-    """Binary user-item matrix: map IDs to dense indices to avoid empty rows/columns"""
-    # Map raw IDs to contiguous 0..n-1 indices to prevent empty columns/rows
+    "Store unique users and movies, and original indices"
     unique_users, user_index = np.unique(user_id, return_inverse=True)
     unique_movies, movie_index = np.unique(movie_id, return_inverse=True)
 
     n_users = unique_users.size
     n_movies = unique_movies.size
 
-    # Build CSC matrix with shape (n_movies, n_users)
+    '''Binary/boolean user-item matrix: CSC matrix with shape (n_movies, n_users). 
+    Entry is True if user rated movie, else not explicitly stored'''
     S_i = sparse.csc_matrix(
-        (np.ones(len(user_index), dtype=bool), (movie_index, user_index)),
+        (np.ones(user_index.size, dtype=bool), (movie_index, user_index)),
         shape=(n_movies, n_users),
         dtype=bool
     )
@@ -41,24 +41,20 @@ S_i, user_id, movie_id = load_data_to_sparse_matrix()
 
 def minhash_sig(S_i, n_permutations, seed):
     "Signature matrix with shape (n_permutations, n_users)"
-    # Use a sentinel equal to number of rows for columns with no 1s in a permutation
     n_rows, n_cols = S_i.shape
-    sign_matrix = np.full((n_permutations, n_cols), fill_value=n_rows, dtype=int)
+    sign_matrix = np.zeros((n_permutations, n_cols), dtype=int)
 
     for i in range(n_permutations): # for every permutation
-        np.random.seed(int(i * seed)) #this function allows the use of a random seed and avoids repeats in permutation of indices
-        perm = np.random.permutation(S_i.shape[0]) # permute the row indices
-        # Permute the rows and ensure CSC format for efficient column access
+        np.random.seed(int(i * seed)) # allows the use of a random seed and avoids repeats in permutation of indices
+        perm = np.random.permutation(n_rows) 
+        "Permute the rows of the sparse matrix"
         perm_sparse = S_i[perm, :]
 
         for j in range(n_cols): # for every user (column)
-            start = perm_sparse.indptr[j]
-            end = perm_sparse.indptr[j + 1]
-            if start == end:
-                # Column has no 1s in this permutation; keep sentinel
-                continue
+            start = perm_sparse.indptr[j] # start index of column j
+            end = perm_sparse.indptr[j + 1] # end index of column j
             col_rows = perm_sparse.indices[start:end]
-            # First row (minimum index) where column j is 1 after permutation
+            "First row (minimum index) where column (user) j is '1' after permutation"
             sign_matrix[i, j] = col_rows.min()
 
     return sign_matrix
