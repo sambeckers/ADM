@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import sparse
+import time
 
 """
 DONE: Read data
@@ -14,6 +15,9 @@ TODO: Optimise function for minhashing
 TODO: Write LSH algorithm function
 TODO: Write a README file with instructions on how to run the file for the grader
 """
+
+"Setting an initial value for the seed, for testing"
+seed = 42
 
 def load_data_to_sparse_matrix():
     "Loading the data and assigning to variables"
@@ -36,7 +40,7 @@ def load_data_to_sparse_matrix():
 
     return S_i, unique_users, unique_movies
     
-S_i, user_id, movie_id = load_data_to_sparse_matrix()
+# S_i, user_id, movie_id = load_data_to_sparse_matrix()
 
 def minhash_sig(S_i, n_permutations, seed):
     "Signature matrix with shape (n_permutations, n_users)"
@@ -59,86 +63,25 @@ def minhash_sig(S_i, n_permutations, seed):
 
     return sign_matrix
 
-minhash_sig(S_i,5, 42)
+# print(minhash_sig(S_i,5, 42))
+
+def timing(func):
+    "This function can be used as a decorator to time functions"
+    def wrapper_function(*args,**kwargs): 
+        start_time = time.time()
+        func(*args,**kwargs)
+        end_time   = time.time()
+
+        print("This function {} took {:.2g} seconds to run".format(func.__name__,end_time - start_time))
+    return wrapper_function
+
 """
 Minhashing
 """
 "Using the 'characteristic matrix' from slide 15 of lecture 4 as example"
 char_matrix_test = np.array([[1,0,1,0],[1,0,0,1],[0,1,0,1],[0,1,0,1],[0,1,0,1],[1,0,1,0],[1,0,1,0]]).reshape(7,4)
 
-"Each row is a 'shingle' which in this case is just whether a person rated a movie or not"
-length = char_matrix_test.shape[0]
-
-"Introducing some settings for the random seeds"
-seed     = 0 # a value for the random seed
-seed_max = 2025 # a maximum value of the seed
-
-def minhash_initial(char_matrix,n_permutations,seed=seed):
-    test_array = np.array([])
-    permutation_seed = seed
-    "Finding the number of columns of the characteristic matrix"
-    length = char_matrix.shape[1]
-
-    "Making the signature matrix"
-    sign_matrix = np.zeros(int(n_permutations * length)).reshape(n_permutations,length)
-    print("The signature matrix looks like this",sign_matrix)
-
-    for i in range(n_permutations): # for every permutation
-        permutation = np.random.RandomState(seed=permutation_seed).permutation(length) #this function allows the use of a random seed and avoids repeats in permutation of indices
-
-        "Writing the new permutation to an array"
-        test_array  = np.append(test_array,permutation)
-
-        "Update the seed with a new one"
-        permutation_seed = np.random.randint(0,seed_max)
-
-        "Permuting the matrix"
-        "NOTE We could permute the entire matrix, but we might not check every row of the permuted matrix, so this would be inefficient"
-        "Also, this doesn't do it the correct way apparently"
-        #print(char_matrix[permutation])
-
-        "Make a copy of the entered matrix"
-        char_matrix_copy = char_matrix.copy()
-
-        counter = 0
-        while len(np.nonzero(sign_matrix[i])) < length:
-            "Select the row in which we want to check for nonzero entries"
-            column_to_check       = char_matrix_copy[permutation == counter][0]
-            print("Column to check is",column_to_check)
-
-            "Find the indices that are nonzero"
-            check              = np.nonzero(column_to_check)[0]
-            print("The nonzero indices are at",check)
-
-            "If there are nonzero entries, clear the matrix in that column to prevent recounting"
-            if len(check) > 0:
-                for column in check:
-                    char_matrix_copy[:,column] = np.zeros_like(char_matrix_copy[:,column])
-
-            "Update the signature matrix"
-            sign_matrix[i][check] = counter + 1
-            print("The updated signature matrix is therefore",sign_matrix)    
-            
-            "Increase the counter by one"
-            counter += 1
-
-            if counter > 50:
-                print("Manual breaking necessary!")
-                break
-
-    print("Resulting signature matrix is",sign_matrix)
-    "Reshaping the temporary testing array"
-    test_array = test_array.reshape(n_permutations,char_matrix.shape[0])
-
-    "Plotting a histogram of the different permutations of the first index to see if this is actually uniformly distributed"
-    # plt.figure()
-    # plt.hist(test_array[:,0],color='blue',edgecolor='black')
-    # plt.show()
-
-    return None
-
-
-def permutation_test(n_permutations,seed=seed,index=0):
+def permutation_test(n_permutations,length=7,seed=seed,index=0):
     """
     This function can be used to visually check whether the indices of the matrix are actually permuted uniformly or not
 
@@ -179,6 +122,7 @@ def permutation_test(n_permutations,seed=seed,index=0):
     plt.title(f"Distribution of indices by permuting {n_permutations} times")
     plt.show()
 
+@timing
 def minhash_slow(char_matrix,n_permutations,seed=seed):
     """
     This function is a simple implementation of the minhash algorithm.
@@ -243,7 +187,53 @@ def minhash_fast(char_matrix,n_permutations,seed=seed):
     return None
 
 "Runnign the permutation test to analyse its output"
-# permutation_test(1000)
+permutation_test(1000)
 
 "Running the minhash function to analyse its output"
-# minhash_slow(char_matrix_test,6)
+
+minhash_slow(char_matrix_test,6)
+
+
+""" Testing """
+testing = True
+if testing:
+    "Testing out the representation of a sparse matrix"
+    test_matrix        = np.zeros(10000).reshape(100,100)
+    test_matrix[51,61] = 1
+    test_matrix[9,51]  = 3
+
+    "Make the spare matrix"
+    test = sparse.csc_matrix(test_matrix)
+    print("Sparse matrix representation: \n",test)
+
+    "Apply the load_data_to_sparse_matrix function to a simple dataset"
+    def load_data_to_sparse_matrix_test():
+        "Loading the data and assigning to variables"
+        user_id = np.array([1,1,1,3,4,5,6])
+        movie_id = np.array([20,6,5,7,6,5,6])
+        
+        print(f"Provided user ids are {user_id}")
+        print(f"Provided movie ids are {movie_id}")
+
+        "Store unique users and movies, and original indices"
+        unique_users, user_index   = np.unique(user_id, return_inverse=True)
+        unique_movies, movie_index = np.unique(movie_id, return_inverse=True)
+        n_users                    = unique_users.size
+        n_movies                   = unique_movies.size
+        print(f"n_users = {n_users}, unique_users = {unique_users}")
+        print(f"n_movies = {n_movies}, unique_movies = {unique_movies}")
+
+        '''Binary/boolean user-item matrix: CSC matrix with shape (n_movies, n_users). 
+        Entry is True if user rated movie, else not explicitly stored'''
+        S_i = sparse.csc_matrix(
+            (np.ones(user_index.size, dtype=bool), (movie_index, user_index)),
+            shape=(n_movies, n_users),
+            dtype=bool
+        )
+
+        return S_i, unique_users, unique_movies
+    print("The produced sparse signature matrix is \n",load_data_to_sparse_matrix_test()[0])
+
+
+
+
