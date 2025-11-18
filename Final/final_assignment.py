@@ -17,15 +17,14 @@ TODO: Write a README file with instructions on how to run the file for the grade
 
 def load_data_to_sparse_matrix():
     "Loading the data and assigning to variables"
-    data = np.load('user_movie_rating.npy')
-    user_id, movie_id = data[:,0], data[:,1] # Do not load ratings as they are irrelevant
+    data                = np.load('user_movie_rating.npy')
+    user_id, movie_id   =  data[:,0], data[:,1] # Do not load ratings as they are irrelevant
     
     "Store unique users and movies, and original indices"
-    unique_users, user_index = np.unique(user_id, return_inverse=True)
+    unique_users, user_index   = np.unique(user_id, return_inverse=True)
     unique_movies, movie_index = np.unique(movie_id, return_inverse=True)
-
-    n_users = unique_users.size
-    n_movies = unique_movies.size
+    n_users                    = unique_users.size
+    n_movies                   = unique_movies.size
 
     '''Binary/boolean user-item matrix: CSC matrix with shape (n_movies, n_users). 
     Entry is True if user rated movie, else not explicitly stored'''
@@ -44,16 +43,17 @@ def minhash_sig(S_i, n_permutations, seed):
     n_rows, n_cols = S_i.shape
     sign_matrix = np.zeros((n_permutations, n_cols), dtype=int)
 
-    for i in range(n_permutations): # for every permutation
-        np.random.seed(int(i * seed)) # allows the use of a random seed and avoids repeats in permutation of indices
-        perm = np.random.permutation(n_rows) 
+    for i in range(n_permutations):                         # for every permutation
+        np.random.seed(int(i * seed))                       # allows the use of a random seed and avoids repeats in permutation of indices
+        
         "Permute the rows of the sparse matrix"
+        perm        = np.random.permutation(n_rows) 
         perm_sparse = S_i[perm, :]
 
-        for j in range(n_cols): # for every user (column)
-            start = perm_sparse.indptr[j] # start index of column j
-            end = perm_sparse.indptr[j + 1] # end index of column j
-            col_rows = perm_sparse.indices[start:end]
+        for j in range(n_cols):                             # for every user (column)
+            start             = perm_sparse.indptr[j]       # start index of column j
+            end               = perm_sparse.indptr[j + 1]   # end index of column j
+            col_rows          = perm_sparse.indices[start:end]
             "First row (minimum index) where column (user) j is '1' after permutation"
             sign_matrix[i, j] = col_rows.min()
 
