@@ -14,10 +14,14 @@ DONE: Write function for minhashing
 TODO: Optimise function for minhashing
 TODO: Write LSH algorithm function
 TODO: Write a README file with instructions on how to run the file for the grader
+TODO: Write the output of the LSH algorithm as user1,user2 (with user1<user2)
+TODO: store signature matrix to prevent having to remake it everytime.
+TODO: Test output of for different random seeds
 """
 
 "Setting an initial value for the seed, for testing"
 seed = 42
+seed_max = 2025 #temporary
 
 def load_data_to_sparse_matrix():
     "Loading the data and assigning to variables"
@@ -63,7 +67,7 @@ def minhash_sig(S_i, n_permutations, seed):
 
     return sign_matrix
 
-# print(minhash_sig(S_i,5, 42))
+# print("The produced signature matrix is \n",minhash_sig(S_i,5, 42))
 
 def timing(func):
     "This function can be used as a decorator to time functions"
@@ -156,6 +160,7 @@ def minhash_slow(char_matrix,n_permutations,seed=seed):
         permutation = np.random.RandomState(seed=permutation_seed).permutation(char_matrix.shape[0]) #this function allows the use of a random seed and avoids repeats in permutation of indices
 
         "Update the seed used for the permutation with a new one"
+
         permutation_seed = np.random.randint(0,seed_max)
 
         "Reorder the matrix, based on the permutation"
@@ -187,11 +192,11 @@ def minhash_fast(char_matrix,n_permutations,seed=seed):
     return None
 
 "Runnign the permutation test to analyse its output"
-permutation_test(1000)
+# permutation_test(1000)
 
 "Running the minhash function to analyse its output"
 
-minhash_slow(char_matrix_test,6)
+# minhash_slow(char_matrix_test,6)
 
 
 """ Testing """
@@ -235,5 +240,27 @@ if testing:
     print("The produced sparse signature matrix is \n",load_data_to_sparse_matrix_test()[0])
 
 
+    "Using an example from the lectures"    
+    sig_matrix = np.array([[2,1,2,1],[2,1,4,1],[1,2,1,2]]).reshape(3,4)
+    
 
+    def user_similarity(sig_matrix,u1,u2):
+        """
+        Approximates the Jaccard similarity. This is done by counting how many elements
+        in the columns of the signature matrix for two users are equal to each other.
+        This number is compared by the length of the column. This approximates the Jaccard
+        similarity because of the many permutations of the characteristic matrix
+
+        Input
+        sig_matrix  : 2D array. The signature matrix produced by minhashing.
+        u1          : 1D array. The column of user 1 in the signature matrix / band
+        u2          : 1D array. The column of user 2 in the signature matrix / band
+
+        Output
+        The similarity between two users
+        """
+        
+        return np.count_nonzero(sig_matrix[:,u1]==sig_matrix[:,u2])/len(sig_matrix[:,u1])
+        
+    print(user_similarity(sig_matrix,0,2))
 
