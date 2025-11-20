@@ -18,6 +18,7 @@ TODO: Write a README file with instructions on how to run the file for the grade
 
 "Setting an initial value for the seed, for testing"
 seed = 42
+seed_max = 50
 
 def load_data_to_sparse_matrix():
     "Loading the data and assigning to variables"
@@ -192,6 +193,25 @@ permutation_test(1000)
 "Running the minhash function to analyse its output"
 
 minhash_slow(char_matrix_test,6)
+
+"""
+Locality Sensitive Hashing
+"""
+def LSH():
+      """ Substeps:
+      - Split data of columns into bands (size of band estimated by b=n/5, or for a range of b's)
+      - Hash bands into hash table
+      - Sort hash table from empty to full buckets
+      - Check which bands are hashed to the same bucket: this is a candidate pair
+      - (For a candidate pair of bands, it is likely that the corresponding columns are similar)
+      - Keep track of candidate pairs
+      - If in the next, fuller, bucket there is a candidate pair that we already have: throw out
+      - Finish calculating all buckets in the hash table
+      - Finish iterating over all hash tables of all bands
+      - Calculate the similarity of columns of candidate band pairs
+      - End product for plot (slide 48 L4): Similarity value per candidate pair
+      - End product for assignment: candidate pairs with similarity above threshold
+      """
 
 
 """ Testing """
