@@ -276,10 +276,12 @@ if testing:
         u2          : 1D array. The column of user 2 in the signature matrix / band
 
         Output
-        The similarity between two users
+        similarity  : Float. The similarity between two users
         """
         
-        return np.count_nonzero(sig_matrix[:,u1]==sig_matrix[:,u2])/len(sig_matrix[:,u1])
+        similarity = np.count_nonzero(sig_matrix[:,u1]==sig_matrix[:,u2])/len(sig_matrix[:,u1])
+
+        return similarity
         
     print(user_similarity(sig_matrix,0,2))
 
