@@ -8,7 +8,7 @@ import time
 DONE: Read data
 TODO: Make it possible to accept random_seed from the command line
 TODO: Convert data to user-item matrix (movies/ratings per user)
-TODO: Write function for Jaccard similarity
+DONE: Write function for Jaccard similarity
 TODO: Write function for shingling (make a matrix with a column for each user and each row showing whether they watched the movie or not)
 DONE: Write function for minhashing
 TODO: Optimise function for minhashing
@@ -17,6 +17,7 @@ TODO: Write a README file with instructions on how to run the file for the grade
 TODO: Write the output of the LSH algorithm as user1,user2 (with user1<user2)
 TODO: store signature matrix to prevent having to remake it everytime.
 TODO: Test output of for different random seeds
+TODO: Append results in result.txt file, and close after (see hint 6)
 """
 
 "Setting an initial value for the seed, for testing"
@@ -182,6 +183,7 @@ def minhash_slow(char_matrix,n_permutations,seed=seed):
 
 
 "Instead use hash functions to make the permutations? This has been used in assignment 2 task 2"
+"--> see hint 2 in the final assignment pdf: use random permutations for this dataset to avoid time-consuming loops"
 
 def minhash_fast(char_matrix,n_permutations,seed=seed):
     """
@@ -191,7 +193,7 @@ def minhash_fast(char_matrix,n_permutations,seed=seed):
 
     return None
 
-"Runnign the permutation test to analyse its output"
+"Running the permutation test to analyse its output"
 # permutation_test(1000)
 
 "Running the minhash function to analyse its output"
@@ -201,21 +203,65 @@ minhash_slow(char_matrix_test,6)
 """
 Locality Sensitive Hashing
 """
-def LSH():
-      """ Substeps:
-      - Split data of columns into bands (size of band estimated by b=n/5, or for a range of b's)
-      - Hash bands into hash table
-      - Sort hash table from empty to full buckets
-      - Check which bands are hashed to the same bucket: this is a candidate pair
-      - (For a candidate pair of bands, it is likely that the corresponding columns are similar)
-      - Keep track of candidate pairs
-      - If in the next, fuller, bucket there is a candidate pair that we already have: throw out
-      - Finish calculating all buckets in the hash table
-      - Finish iterating over all hash tables of all bands
-      - Calculate the similarity of columns of candidate band pairs
-      - End product for plot (slide 48 L4): Similarity value per candidate pair
-      - End product for assignment: candidate pairs with similarity above threshold
-      """
+def LSH(sig_matrix):
+    """ 
+    Implement the Locality Sensitive Hashing algorithm.
+    Substeps:
+    - Split data of columns into bands (size of band estimated by b=n/5, or for a range of b's)
+    DONE: use sig_to_band()
+    - Hash bands into hash table
+    DONE: use hash_table_maker() per band
+    AND: use find_candidate_pairs() per hash table from the hash_table_maker()
+    - Sort hash table from empty to full buckets
+    - (For a candidate pair of bands, it is likely that the corresponding columns are similar)
+    - Keep track of candidate pairs
+    - If in the next, fuller, bucket there is a candidate pair that we already have: throw out
+    - Finish calculating all buckets in the hash table
+    - Calculate the similarity of columns of candidate band pairs
+
+    - End product for plot (slide 48 L4): Similarity value per candidate pair
+    - End product for assignment: candidate pairs with similarity above threshold
+    """
+
+    "Make bands for a certain b and hash"
+    hash_table = hash_table_maker(signature_matrix=sig_matrix, b=5)
+    buckets = find_candidate_pairs(hash_table)
+
+    "Sort from empty to full buckets"
+    sorted_buckets = sorted(buckets, key=len)
+
+    "Store the already seen pairs in unordered set"
+    found_pairs = set()
+    unique_pairs = []
+
+    "Collect unique unordered sets from the bucket"
+    for bucket in sorted_buckets:
+
+        "Go through all values in the bucket"
+        for i in range(len(bucket)):
+
+            for j in range(i + 1, len(bucket)):
+                "Note: because of the implementation in find_candidate_pairs, bucket[i] < bucket[i+1] always"
+                pair = (bucket[i], bucket[j])
+
+                "Check if pair already found"
+                if pair not in found_pairs:
+
+                    "Similarity threshold calculation here!"
+                    #print(f"Pair found with estimated similarity {user_similarity(sig_matrix, bucket[i]-1, bucket[j]-1)}")
+                    
+                    "-1 for the users to indices conversion"
+                    if user_similarity(sig_matrix, bucket[i]-1, bucket[j]-1) > 0.5:
+                        found_pairs.add(pair)
+                        unique_pairs.append(pair)
+                        
+
+    return unique_pairs
+          
+
+
+
+
 
 
 """ Testing """
@@ -326,7 +372,7 @@ if testing:
         bands = []
 
         "Determine the number of rows that go in one band"
-        r = signatures / b
+        r = signatures / b # b*r roughly equals the length of the signature, but not necessarily exactly
 
         # print("Value for r is",r)
         "Select the band from the signature matrix and write it to a list"
@@ -378,7 +424,7 @@ if testing:
 
     def find_candidate_pairs(hash_table):
         """
-        Finds a candidate pair of users (using non-zero indices). If two users have similar hash-values
+        Finds a candidate pair of users (using non-zero indices). If two users have identical hash-values
         they are considered candidate pairs
         """
 
@@ -408,9 +454,13 @@ if testing:
                 
                         "Convert the indices into users, then into a tuple and store in the list"
                         candidate_pairs.append(tuple(indices + 1))
-                        
 
         print(candidate_pairs)
+                    
         return candidate_pairs 
     
     find_candidate_pairs(hash_table_maker(sig_matrix2,4))
+
+    "Test the LSH function"
+    unique_pairs_test = LSH(sig_matrix=sig_matrix2)
+    print(f"Found {len(unique_pairs_test)} unique and similar pairs in the test")
