@@ -283,5 +283,134 @@ if testing:
 
         return similarity
         
-    print(user_similarity(sig_matrix,0,2))
+    # print(user_similarity(sig_matrix,0,2))
 
+    def hash_value_calculator(vector):
+        """
+        Hashes a vector to a hash-value. The same hash function will be used for all bands.
+        This is done, because the similarity of a band should not be dependent on the chosen
+        hash function.
+
+        Input
+        vector      : 1-D array. Contains the values of one band from the signature matrix
+
+        Output
+        hash_value  : Integer. The determined hash value based on the given vector
+
+        TODO        : Make sure this function doesn't cause too many collisions, but also not too few
+        """
+        hash_value = np.sum(vector) % 1024
+
+        # print(f"Sum of the vector is {np.sum(vector)} and the hash value is {hash_value}") #for testing
+
+        return hash_value
+    
+    print(sig_matrix[0:2])
+
+    sig_matrix2 = np.array([
+        [1,0,0,1,3,4],
+        [2,5,2,1,3,2],
+        [3,6,5,4,1,2],
+        [4,1,5,4,2,1],
+        [5,8,6,0,1,2],
+        [6,4,8,1,6,2],
+        [7,3,2,1,4,2],
+        [8,1,5,2,4,5]
+    ])
+
+    def sig_to_band(signature_matrix,b):
+        "Divides the signature matrix up into b smaller matrices with an equal number of rows"
+        signatures, users = signature_matrix.shape
+
+        "Make a list to store the bands of the signature matrix in"
+        bands = []
+
+        "Determine the number of rows that go in one band"
+        r = signatures / b
+
+        # print("Value for r is",r)
+        "Select the band from the signature matrix and write it to a list"
+        for i in range(b):
+            band = signature_matrix[int(i*r):int((i+1)*r)]
+            # print("Selected band is",band,"which has shape",band.shape)
+            bands.append(band)
+            
+        return bands
+
+        
+    # sig_to_band(sig_matrix2,4)
+
+    def hash_table_maker(signature_matrix,b):
+        """
+        Makes a hash table using the hash_value_calculator function.
+
+        Input
+        signature_matrix    : 2D array. The signature matrix produced by minhashing.
+        b                   : Integer. Number of bands.
+        
+        Output 
+        hash_table          : 2D array with shape (b,users). Each row is the hash table for a band. 
+        """
+
+        "Retrieve the number of users from the signature matrix"
+        users = signature_matrix.shape[1]
+
+        "Create the hash table"
+        hash_table = np.zeros(int(b*users)).reshape(b,users)
+
+        "Select the bands from the signature matrix"
+        bands = sig_to_band(signature_matrix,b)
+
+        "Looping over each band"
+        for i in range(b):
+            "Select the band of interest"
+            band = bands[i]
+            # print("The band of interest is",band)
+            "Looping over each user"
+            for j in range(users):
+                "Calculate the hash-value and enter it into the hash_table"
+                # print("The row used for the calculation is",band[:,j])
+                hash_table[i,j] = hash_value_calculator(band[:,j])
+        
+        return hash_table
+    
+    print("The produced hash-table is\n",hash_table_maker(sig_matrix2,4))
+
+    def find_candidate_pairs(hash_table):
+        """
+        Finds a candidate pair of users (using non-zero indices). If two users have similar hash-values
+        they are considered candidate pairs
+        """
+
+        "Make a list to keep track of the different cadidate users"
+        candidate_pairs = []
+
+        "For each row in the hash table"
+        for i in range(hash_table.shape[0]):
+            "Select a row from the hash table"
+            row = hash_table[i]
+            print("Row of interest is",row)
+
+            "Find the unique values in that row"
+            uniques = np.unique(row)
+
+            "Only continue if there is a non-unique value"
+            if len(uniques) != len(row):
+                "For each unique value, count its occurence in the row of the hash table"
+                for unique_value in uniques:
+                    "Determine the occurence"
+                    occurence = len(np.nonzero(row == unique_value)[0])
+                    
+                    "If this is larger than one, store the users"
+                    if occurence > 1:
+                        "Find the indices of the non-unique values"
+                        indices = np.argwhere(row == unique_value).reshape(1,2)[0]
+                
+                        "Convert the indices into users, then into a tuple and store in the list"
+                        candidate_pairs.append(tuple(indices + 1))
+                        
+
+        print(candidate_pairs)
+        return candidate_pairs 
+    
+    find_candidate_pairs(hash_table_maker(sig_matrix2,4))
