@@ -24,7 +24,6 @@ TODO: Append results in result.txt file, and close after (see hint 6)
 
 "Setting an initial value for the seed, for testing"
 seed = 42
-seed_max = 2025 #temporary
 
 """
 Data loading and processing
@@ -56,20 +55,20 @@ Minhashing
 def minhash_sig(S_i, n_permutations, seed):
     "Signature matrix with shape (n_permutations, n_users)"
     n_rows, n_cols = S_i.shape
-    sign_matrix = np.zeros((n_permutations, n_cols), dtype=int)
+    sign_matrix    = np.zeros((n_permutations, n_cols), dtype=int)
 
     print('Creating minhash signature matrix with {} permutations...'.format(n_permutations))
     for i in tqdm(range(n_permutations), total=n_permutations): # for every permutation
         np.random.seed(int(i * seed)) # allows the use of a random seed and avoids repeats in permutation of indices
         
         "Permute the rows of the sparse matrix"
-        perm = np.random.permutation(n_rows) 
+        perm        = np.random.permutation(n_rows) 
         perm_sparse = S_i[perm, :]
 
         for j in range(n_cols): # for every user (column)
-            start = perm_sparse.indptr[j]       # start index of column j
-            end = perm_sparse.indptr[j + 1]   # end index of column j
-            col_rows = perm_sparse.indices[start:end]
+            start             = perm_sparse.indptr[j]       # start index of column j
+            end               = perm_sparse.indptr[j + 1]   # end index of column j
+            col_rows          = perm_sparse.indices[start:end]
             "First row (minimum index) where column (user) j is '1' after permutation"
             sign_matrix[i, j] = col_rows.min()
 
@@ -124,14 +123,14 @@ def lsh(sig_matrix, b, r):
        
         "Sort the hash values"
         sort_user_idx = np.argsort(hashes) # These are the USER INDICES sorted by hash value!
-        hashes = hashes[sort_user_idx]
+        hashes        = hashes[sort_user_idx]
 
         "Find where hash values change (bucket boundaries), "
         "nonzero finds indices where condition (adjacent value is larger than current) is True"
-        boundaries = np.nonzero(hashes[1:] > hashes[:-1])[0] + 1
+        boundaries    = np.nonzero(hashes[1:] > hashes[:-1])[0] + 1
         
         "Split into buckets - each bucket contains user indices with same hash"
-        buckets_arr = np.split(sort_user_idx, boundaries)
+        buckets_arr   = np.split(sort_user_idx, boundaries)
 
         "Only keep buckets with more than one user, cannot compare single users"
         for j in range(len(buckets_arr)):
@@ -148,7 +147,7 @@ Find pairs of similar users from LSH buckets
 """
 def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -> None:
     "Store the already seen pairs in unordered set"
-    found_pairs = set()
+    found_pairs    = set()
     verified_pairs = set()
 
     "Collect unique unordered sets from the bucket"
@@ -193,17 +192,17 @@ def main(seed, n_permutations, b, r, threshold):
         seed, n_permutations, b, r, threshold
     ))
 
-    S_i = load_data_to_sparse_matrix()
-    sig_matrix = minhash_sig(S_i=S_i, n_permutations=n_permutations, seed=seed)
-    buckets = lsh(sig_matrix=sig_matrix, b=b, r=r)
-    verified_pairs = find_similar_user_pairs(
-        buckets=buckets,
-        sig_matrix=sig_matrix,
-        sparse_matrix=S_i,  
+    S_i               = load_data_to_sparse_matrix()
+    sig_matrix        = minhash_sig(S_i=S_i, n_permutations=n_permutations, seed=seed)
+    buckets           = lsh(sig_matrix=sig_matrix, b=b, r=r)
+    verified_pairs    = find_similar_user_pairs(
+        buckets       = buckets,
+        sig_matrix    = sig_matrix,
+        sparse_matrix = S_i,  
         threshold=threshold
     )
     
-    elapsed_time = (time.time() - start_time) / 60
+    elapsed_time      = (time.time() - start_time) / 60
     print('Total execution time: {:.2f} minutes'.format(elapsed_time))
     
     return verified_pairs
