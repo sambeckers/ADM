@@ -178,6 +178,7 @@ def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -
 
     "Sort buckets by size (smallest first)"
     buckets_sorted = sorted(buckets, key=lambda x: len(x))
+    print('Largest bucket has size: {}'.format(len(buckets_sorted[-1])))
 
     print('Finding candidate user pairs from LSH buckets (small to large)...')
     for bucket in tqdm(buckets_sorted, total=len(buckets_sorted)):
