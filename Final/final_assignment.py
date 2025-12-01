@@ -11,18 +11,18 @@ import sys
 
 """
 DONE: Read data
-TODO: Make it possible to accept random_seed from the command line
+DONE: Make it possible to accept random_seed from the command line
 DONE: Convert data to user-item matrix (movies/ratings per user)
 DONE: Write function for Jaccard similarity
-TODO: Write function for shingling (make a matrix with a column for each user and each row showing whether they watched the movie or not)
+DONE: Write function for shingling (make a matrix with a column for each user and each row showing whether they watched the movie or not)
 DONE: Write function for minhashing
-TODO: Optimise function for minhashing
-TODO: Write LSH algorithm function
-TODO: Write a README file with instructions on how to run the file for the grader
-TODO: Write the output of the LSH algorithm as user1,user2 (with user1<user2)
-TODO: store signature matrix to prevent having to remake it everytime.
-TODO: Test output of for different random seeds
-TODO: Append results in result.txt file, and close after (see hint 6)
+DONE: Optimise function for minhashing
+DONE: Write LSH algorithm function
+DONE: Write a README file with instructions on how to run the file for the grader
+DONE: Write the output of the LSH algorithm as user1,user2 (with user1<user2)
+DONE: store signature matrix to prevent having to remake it everytime.
+DONE: Test output of for different random seeds
+DONE: Append results in result.txt file, and close after (see hint 6)
 """
 
 "Timeout handler"
