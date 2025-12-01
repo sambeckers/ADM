@@ -31,14 +31,17 @@ class TimeoutError(Exception):
 
 similarities_global = {}
 output_file_global = 'results.txt'
+results_format_global = 'full'
 
 def timeout_handler(signum, frame):
     print('\nExecution exceeded 30 minutes - saving partial results...')
     if similarities_global:
         with open(output_file_global, 'w') as f:
             for (u1, u2), sim in sorted(similarities_global.items()):
-                f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
-            f.flush()
+                if results_format_global == 'pairs':
+                    f.write('{},{}\n'.format(u1, u2))
+                else:
+                    f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
         print('Saved {} pairs to {}'.format(len(similarities_global), output_file_global))
     else:
         print('No pairs found yet')
@@ -75,7 +78,17 @@ def load_data_to_sparse_matrix():
 Minhashing
 """
 def minhash_sig(S_i, n_permutations, seed):
-    "Signature matrix with shape (n_permutations, n_users)"
+    """
+    Compute the signature matrix for a binary user-item matrix.
+
+    Args:
+        S_i (scipy.sparse.spmatrix): CSC matrix.
+        n_permutations (int): Number of permutations.
+        seed (int): random seed.
+
+    Returns:
+        sign_matrix (numpy.ndarray): signature matrix.
+    """
     n_rows, n_cols = S_i.shape
     sign_matrix    = np.zeros((n_permutations, n_cols), dtype=int)
 
@@ -107,17 +120,28 @@ def lsh_user_similarity(sig_matrix,u1,u2):
     This number is compared by the length of the column. This approximates the Jaccard
     similarity because of the many permutations of the characteristic matrix
 
-    Input
-    sig_matrix  : 2D array. The signature matrix produced by minhashing.
-    u1          : 1D array. The column of user 1 in the signature matrix / band
-    u2          : 1D array. The column of user 2 in the signature matrix / band
+    Args: 
+        sig_matrix (2D array): The signature matrix produced by minhashing.
+        u1 (1D array): The column of user 1 in the signature matrix / band
+        u2 (1D array): The column of user 2 in the signature matrix / band
 
-    Output
-    similarity  : Float. The similarity between two users
+    Returns:
+        similarity (float): The approximated similarity between two users
     """
     return np.count_nonzero(sig_matrix[:,u1]==sig_matrix[:,u2])/len(sig_matrix[:,u1])
 
 def jaccard_similarity(sparse_matrix, u1, u2):
+    """
+    Compute the 'exact' Jaccard similarity between two users.
+
+    Args:
+        sparse_matrix (scipy.sparse.spmatrix): CSC matrix.
+        u1 (1D array): The column of user 1 in the signature matrix / band
+        u2 (1D array): The column of user 2 in the signature matrix / band
+
+    Returns:
+        similarity (float): The similarity between two users
+    """
     set1 = sparse_matrix[:, u1]
     set2 = sparse_matrix[:, u2]
     return np.sum(set1 & set2) / np.sum(set1 | set2)
@@ -126,6 +150,18 @@ def jaccard_similarity(sparse_matrix, u1, u2):
 Local Sensitivity Hashing
 """
 def lsh(sig_matrix, b, r):
+    """
+    Group users into candidate buckets via Locality-Sensitive Hashing.
+
+    Args:
+        sig_matrix (numpy.ndarray): MinHash signatures of shape (n_permutations, n_users).
+        b (int): Number of bands.
+        r (int): Rows per band (must satisfy n_permutations = b * r).
+
+    Returns:
+        buckets [numpy.ndarray]: List of buckets; each bucket is a numpy array of user indices
+            that hashed to the same value in at least one band.
+    """
 
     buckets = []
 
@@ -172,6 +208,19 @@ def lsh(sig_matrix, b, r):
 Find pairs of similar users from LSH buckets
 """
 def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -> None:
+    """
+    Find and verify similar user pairs discovered from LSH buckets.
+
+    Args:
+        buckets (list[numpy.ndarray]): Output from `lsh`; each array contains user indices.
+        sig_matrix (numpy.ndarray): signature matrix.
+        sparse_matrix (scipy.sparse.spmatrix): CSC matrix.
+        threshold (float): Similarity threshold.
+
+    Returns:
+        verified_pairs (set[tuple]): Set of verified similar user pairs (u1, u2) with u1 < u2.
+        similarities (dict): Jaccard similarities.
+    """
     "Store the already seen pairs in unordered set"
     found_pairs    = set()
     verified_pairs = set()
@@ -181,6 +230,11 @@ def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -
     print('Largest bucket has size: {}'.format(len(buckets_sorted[-1])))
 
     print('Finding candidate user pairs from LSH buckets (small to large)...')
+    
+    "Convert sparse matrix to dense once for verification"
+    sparse_mat = sparse_matrix.toarray()
+    similarities = {}
+    
     for bucket in tqdm(buckets_sorted, total=len(buckets_sorted)):
 
         "Go through all values in the bucket"
@@ -198,35 +252,31 @@ def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -
                     "Similarity threshold calculation"
                     if lsh_user_similarity(sig_matrix, u1, u2) > threshold:
                         found_pairs.add((u1, u2))
-
-    "Are candidate pairs really similar? Compare signatures and original objects"
-    sparse_mat = sparse_matrix.toarray()
-    similarities = {}
-
-    print('Verifying candidate user pairs...')
-    for u1, u2 in tqdm(found_pairs, total=len(found_pairs)):
-        sim = jaccard_similarity(sparse_mat, u1, u2)
-        if sim > threshold:
-            verified_pairs.add((u1, u2))
-            similarities[(u1, u2)] = sim
-            similarities_global[(u1, u2)] = sim
+                        
+                        "Immediately verify and save to capture partial results on timeout"
+                        sim = jaccard_similarity(sparse_mat, u1, u2)
+                        if sim > threshold:
+                            verified_pairs.add((u1, u2))
+                            similarities[(u1, u2)] = sim
+                            similarities_global[(u1, u2)] = sim
 
     print('Number of similar user pairs found: {}'.format(len(verified_pairs)))
 
     return verified_pairs, similarities
 
 
-def main(seed, b, r, n_permutations, threshold, output_file):
-    global similarities_global, output_file_global
+def main(seed, b, r, n_permutations, threshold, output_file, results_format='full'):
+    global similarities_global, output_file_global, results_format_global
     similarities_global = {}
     output_file_global = output_file
+    results_format_global = results_format
     
     if n_permutations < b * r:
         print('Error: n_permutations ({}) must be >= b*r ({})'.format(n_permutations, b*r))
         sys.exit(1)
     
     signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(30 * 60)
+    signal.alarm(30*60)  # 30 minutes timeout
     
     start_time = time.time()
     print('Running LSH pipeline with seed={}, b={}, r={}, n_permutations={}, threshold={}\n'.format(
@@ -245,7 +295,10 @@ def main(seed, b, r, n_permutations, threshold, output_file):
     
     with open(output_file, 'w') as f:
         for (u1, u2), sim in sorted(similarities.items()):
-            f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
+            if results_format == 'pairs':
+                f.write('{},{}\n'.format(u1, u2))
+            else:
+                f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
     
     elapsed_time = (time.time() - start_time) / 60
     print('Total execution time: {:.2f} minutes'.format(elapsed_time))
@@ -261,6 +314,8 @@ if __name__ == '__main__':
     parser.add_argument('--n', type=int, default=None, help='Number of permutations (default: b*r)')
     parser.add_argument('--threshold', type=float, default=0.5, help='Similarity threshold')
     parser.add_argument('--output', type=str, default='results.txt', help='Output file')
+    parser.add_argument('--results_format', type=str, default='full', choices=['full', 'pairs'],
+                        help='Output format: full (u1,u2,similarity) or pairs (u1,u2)')
     
     args = parser.parse_args()
     
@@ -270,4 +325,5 @@ if __name__ == '__main__':
         print('Setting n_permutations = b * r = {}'.format(args.n))
     
     results, sims = main(seed=args.seed, b=args.b, r=args.r, n_permutations=args.n,
-                         threshold=args.threshold, output_file=args.output)
+                         threshold=args.threshold, output_file=args.output,
+                         results_format=args.results_format)

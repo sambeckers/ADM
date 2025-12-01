@@ -22,7 +22,7 @@ python final_assignment.py
 
 With custom parameters:
 ```bash
-python final_assignment.py --seed 42 --b 20 --r 5 --threshold 0.5 --output results.txt
+python final_assignment.py --seed 42 --b 20 --r 5 --threshold 0.5 --output results.txt --results_format full
 ```
 
 Parameters:
@@ -32,6 +32,7 @@ Parameters:
 - `--n`: Number of permutations (default: auto-calculated as b*r)
 - `--threshold`: Similarity threshold (default: 0.5)
 - `--output`: Output file name (default: results.txt)
+- `--results_format`: Output format - 'full' for u1,u2,similarity or 'pairs' for u1,u2 only (default: full)
 
 Note: The script has a 30-minute timeout. Partial results are saved if timeout occurs.
 
@@ -51,6 +52,13 @@ python run_experiments.py --scurve   # Generate S-curve plot only
 
 ## Output Format
 
-Results are saved as CSV with format: `user1,user2,similarity`
-- user1 < user2 (sorted)
-- similarity is Jaccard similarity score
+Results are saved as CSV:
+- **Full format** (default): `user1,user2,similarity` - includes Jaccard similarity score (useful for plotting)
+- **Pairs format**: `user1,user2` - just the user pairs without similarity
+
+In both formats, user1 < user2 (sorted).
+
+Example with pairs format:
+```bash
+python final_assignment.py --results_format pairs --output results_pairs.txt
+```
