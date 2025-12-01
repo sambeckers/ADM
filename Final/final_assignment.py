@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from scipy import sparse
 import time
 from tqdm import tqdm
+import argparse
+import signal
+import sys
 import sys
 
 """
@@ -21,6 +24,25 @@ TODO: store signature matrix to prevent having to remake it everytime.
 TODO: Test output of for different random seeds
 TODO: Append results in result.txt file, and close after (see hint 6)
 """
+
+"Timeout handler"
+class TimeoutError(Exception):
+    pass
+
+similarities_global = {}
+output_file_global = 'results.txt'
+
+def timeout_handler(signum, frame):
+    print('\nExecution exceeded 30 minutes - saving partial results...')
+    if similarities_global:
+        with open(output_file_global, 'w') as f:
+            for (u1, u2), sim in sorted(similarities_global.items()):
+                f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
+            f.flush()
+        print('Saved {} pairs to {}'.format(len(similarities_global), output_file_global))
+    else:
+        print('No pairs found yet')
+    sys.exit(0)
 
 "Setting an initial value for the seed, for testing"
 seed = 42
@@ -116,11 +138,15 @@ def lsh(sig_matrix, b, r):
 
         "Hash the indices of each band, with dimension equal to the maximum value in each row"
         try:
-            hashes = np.ravel_multi_index(multi_index=band, dims=band.max(axis=1)+1)
-        except ValueError as e:
-            print(e)
-            print('b*r exceeds signature matrix dimensions. Run again with n > b*r.')
-            sys.exit(1)
+            # Use smaller modulo to prevent overflow with large r values
+            if r > 5:
+                # For large r, use tuple hashing instead
+                hashes = np.array([hash(tuple(band[:, j])) for j in range(band.shape[1])])
+            else:
+                hashes = np.ravel_multi_index(multi_index=band, dims=band.max(axis=1)+1)
+        except (ValueError, OverflowError) as e:
+            # Fallback to tuple hashing if ravel_multi_index fails
+            hashes = np.array([hash(tuple(band[:, j])) for j in range(band.shape[1])])
        
         "Sort the hash values"
         sort_user_idx = np.argsort(hashes) # These are the USER INDICES sorted by hash value!
@@ -151,10 +177,12 @@ def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -
     found_pairs = set()
     verified_pairs = set()
 
-    "Collect unique unordered sets from the bucket"
+    "Sort buckets by size (smallest first)"
+    bucket_sizes = [len(b) for b in buckets]
+    buckets_sorted = sorted(buckets, key=lambda x: len(x))
 
-    print('Finding candidate user pairs from LSH buckets...')
-    for bucket in tqdm(buckets, total=len(buckets)):
+    print('Finding candidate user pairs from LSH buckets (small to large)...')
+    for bucket in tqdm(buckets_sorted, total=len(buckets_sorted)):
 
         "Go through all values in the bucket"
         for i in range(len(bucket)):
@@ -173,41 +201,79 @@ def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -
                         found_pairs.add((u1, u2))
 
     "Are candidate pairs really similar? Compare signatures and original objects"
+    global similarities_global
     sparse_mat = sparse_matrix.toarray()
+    similarities = {}
 
     print('Verifying candidate user pairs...')
     for u1, u2 in tqdm(found_pairs, total=len(found_pairs)):
-        if jaccard_similarity(sparse_mat, u1, u2) > threshold:
+        sim = jaccard_similarity(sparse_mat, u1, u2)
+        if sim > threshold:
             verified_pairs.add((u1, u2))
+            similarities[(u1, u2)] = sim
+            similarities_global[(u1, u2)] = sim
 
     print('Number of similar user pairs found: {}'.format(len(verified_pairs)))
 
-    with open('results.txt', 'w') as f:
-        for u1, u2 in sorted(verified_pairs):
-            f.write('{},{}\n'.format(u1, u2))
+    return verified_pairs, similarities
 
 
-def main(seed, n_permutations, b, r, threshold):
-    start_time = time.time()
-    print('Running LSH pipeline with seed={}, n_permutations={}, b={}, r={}, threshold={}\n'.format(
-        seed, n_permutations, b, r, threshold
-    ))
-
-    S_i = load_data_to_sparse_matrix()
-    sig_matrix = minhash_sig(S_i=S_i, n_permutations=n_permutations, seed=seed)
-    buckets = lsh(sig_matrix=sig_matrix, b=b, r=r)
-    verified_pairs = find_similar_user_pairs(
-        buckets=buckets,
-        sig_matrix=sig_matrix,
-        sparse_matrix=S_i,  
-        threshold=threshold
-    )
+def main(seed, b, r, n_permutations, threshold, output_file):
+    global similarities_global, output_file_global
+    similarities_global = {}
+    output_file_global = output_file
     
-    elapsed_time = (time.time() - start_time) / 60
-    print('Total execution time: {:.2f} minutes'.format(elapsed_time))
+    if n_permutations < b * r:
+        print('Error: n_permutations ({}) must be >= b*r ({})'.format(n_permutations, b*r))
+        sys.exit(1)
     
-    return verified_pairs
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(30 * 60)
+    
+    try:
+        start_time = time.time()
+        print('Running LSH pipeline with seed={}, b={}, r={}, n_permutations={}, threshold={}\n'.format(
+            seed, b, r, n_permutations, threshold
+        ))
+
+        S_i = load_data_to_sparse_matrix()
+        sig_matrix = minhash_sig(S_i=S_i, n_permutations=n_permutations, seed=seed)
+        buckets = lsh(sig_matrix=sig_matrix, b=b, r=r)
+        verified_pairs, similarities = find_similar_user_pairs(
+            buckets=buckets,
+            sig_matrix=sig_matrix,
+            sparse_matrix=S_i,  
+            threshold=threshold
+        )
+        
+        with open(output_file, 'w') as f:
+            for (u1, u2), sim in sorted(similarities.items()):
+                f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
+        
+        elapsed_time = (time.time() - start_time) / 60
+        print('Total execution time: {:.2f} minutes'.format(elapsed_time))
+        
+        signal.alarm(0)
+        return verified_pairs, similarities
+        
+    except TimeoutError:
+        pass
 
 if __name__ == '__main__':
-    # Run the pipeline
-    results = main(seed=42, n_permutations=100, b=33, r=3, threshold=0.5)
+    parser = argparse.ArgumentParser(description='LSH for finding similar users')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--b', type=int, default=20, help='Number of bands')
+    parser.add_argument('--r', type=int, default=5, help='Rows per band')
+    parser.add_argument('--n', type=int, default=None, help='Number of permutations (default: b*r)')
+    parser.add_argument('--threshold', type=float, default=0.5, help='Similarity threshold')
+    parser.add_argument('--output', type=str, default='results.txt', help='Output file')
+    
+    args = parser.parse_args()
+    
+    # Automatically set n = b * r if not specified
+    if args.n is None:
+        args.n = args.b * args.r
+        print('Setting n_permutations = b * r = {}'.format(args.n))
+    
+    results, sims = main(seed=args.seed, b=args.b, r=args.r, n_permutations=args.n,
+                         threshold=args.threshold, output_file=args.output)
