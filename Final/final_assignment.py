@@ -199,7 +199,6 @@ def find_similar_user_pairs(buckets, sig_matrix, sparse_matrix, threshold=0.5) -
                         found_pairs.add((u1, u2))
 
     "Are candidate pairs really similar? Compare signatures and original objects"
-    global similarities_global
     sparse_mat = sparse_matrix.toarray()
     similarities = {}
 
@@ -228,34 +227,30 @@ def main(seed, b, r, n_permutations, threshold, output_file):
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(30 * 60)
     
-    try:
-        start_time = time.time()
-        print('Running LSH pipeline with seed={}, b={}, r={}, n_permutations={}, threshold={}\n'.format(
-            seed, b, r, n_permutations, threshold
-        ))
+    start_time = time.time()
+    print('Running LSH pipeline with seed={}, b={}, r={}, n_permutations={}, threshold={}\n'.format(
+        seed, b, r, n_permutations, threshold
+    ))
 
-        S_i               = load_data_to_sparse_matrix()
-        sig_matrix        = minhash_sig(S_i=S_i, n_permutations=n_permutations, seed=seed)
-        buckets           = lsh(sig_matrix=sig_matrix, b=b, r=r)
-        verified_pairs, similarities    = find_similar_user_pairs(
-            buckets       = buckets,
-            sig_matrix    = sig_matrix,
-            sparse_matrix = S_i,  
-            threshold=threshold
-        )
-        
-        with open(output_file, 'w') as f:
-            for (u1, u2), sim in sorted(similarities.items()):
-                f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
-        
-        elapsed_time      = (time.time() - start_time) / 60
-        print('Total execution time: {:.2f} minutes'.format(elapsed_time))
-        
-        signal.alarm(0)
-        return verified_pairs, similarities
-        
-    except TimeoutError:
-        pass
+    S_i               = load_data_to_sparse_matrix()
+    sig_matrix        = minhash_sig(S_i=S_i, n_permutations=n_permutations, seed=seed)
+    buckets           = lsh(sig_matrix=sig_matrix, b=b, r=r)
+    verified_pairs, similarities    = find_similar_user_pairs(
+        buckets       = buckets,
+        sig_matrix    = sig_matrix,
+        sparse_matrix = S_i,  
+        threshold     = threshold
+    )
+    
+    with open(output_file, 'w') as f:
+        for (u1, u2), sim in sorted(similarities.items()):
+            f.write('{},{},{:.4f}\n'.format(u1, u2, sim))
+    
+    elapsed_time = (time.time() - start_time) / 60
+    print('Total execution time: {:.2f} minutes'.format(elapsed_time))
+    
+    signal.alarm(0)
+    return verified_pairs, similarities
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LSH for finding similar users')
